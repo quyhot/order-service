@@ -26,6 +26,9 @@ module.exports = (joi, mongoose, { joi2MongoSchema, schemas }) => {
   }) => {
     return invoiceJoi.validate(obj, config)
   }
+  invoiceSchema.statics.getConfig = () => {
+    return { stateConfig }
+  }
   const invoiceModel = mongoose.model('Invoice', invoiceSchema)
   invoiceModel.syncIndexes()
   return invoiceModel

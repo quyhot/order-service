@@ -10,6 +10,7 @@ module.exports = (container) => {
       Invoice
     }
   } = container.resolve('models')
+  const { stateConfig } = Invoice.getConfig()
   const { httpCode, serverHelper, vnpayConfig } = container.resolve('config')
   const { invoiceRepo } = container.resolve('repo')
   const addInvoice = async (req, res) => {
@@ -165,6 +166,7 @@ module.exports = (container) => {
         const hmac = crypto.createHmac('sha512', secretKey)
         body.vnp_SecureHash = hmac.update(new Buffer(signData, 'utf-8')).digest('hex')
         const url = `${vnpayConfig.vnpUrl}?${qs.stringify(body, { encode: false })}`
+        await invoiceRepo.updateInvoice(id, { state: stateConfig.PENDING })
         return res.redirect(url)
       }
       res.status(httpCode.BAD_REQUEST).json({ msg: 'wrong id' })
@@ -173,11 +175,26 @@ module.exports = (container) => {
       res.status(httpCode.UNKNOWN_ERROR).json({ ok: false })
     }
   }
-  const receiveOrderResult = (req, res) => {
+  const receiveOrderResult = async (req, res) => {
     try {
       const q = req.query
-      const { id, vnp_ResponseCode: vnpResponseCode } = req.params
-      return res.status(httpCode.SUCCESS).json({ ok: true })
+      const { id } = req.params
+      const { vnp_ResponseCode: vnpResponseCode } = q
+      const data = {
+        vnpResponseCode
+      }
+      switch (vnpResponseCode) {
+        case '24':
+          data.msg = 'Người dùng hủy giao dịch'
+          return res.status(httpCode.BAD_REQUEST).json(data)
+        case '00':
+          data.msg = 'Giao dịch thành công'
+          await invoiceRepo.updateInvoice(id, { state: stateConfig.SUCCESS })
+          return res.status(httpCode.SUCCESS).json(data)
+        default:
+          data.msg = 'Lỗi'
+          return res.status(httpCode.BAD_REQUEST).json(data)
+      }
     } catch (e) {
       logger.e(e)
       res.status(httpCode.UNKNOWN_ERROR).json({ ok: false })
