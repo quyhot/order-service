@@ -2,10 +2,11 @@ module.exports = (joi, mongoose, { joi2MongoSchema, schemas }) => {
   const stateConfig = {
     WAIT_FOR_PAY: 1,
     PENDING: 2,
-    SUCCESS: 3
+    SUCCESS: 3,
+    CANCEL: 4
   }
   const invoiceJoi = joi.object({
-    invoiceRef: joi.number().required(),
+    invoiceRef: joi.number(),
     amount: joi.number().required(),
     orderInfo: joi.string().required(),
     orderId: joi.string().required(),

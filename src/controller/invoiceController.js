@@ -16,7 +16,6 @@ module.exports = (container) => {
   const addInvoice = async (req, res) => {
     try {
       const body = req.body
-      body.invoiceRef = serverHelper.randomOrderRef()
       const {
         error,
         value
@@ -148,11 +147,13 @@ module.exports = (container) => {
       const { id } = req.params
       if (id && id.length === 24) {
         const invoice = await invoiceRepo.getInvoiceById(id)
-        if (!invoice) res.status(httpCode.BAD_REQUEST).json({ msg: 'invoice does not exists!' })
+        if (!invoice) return res.status(httpCode.BAD_REQUEST).json({ msg: 'invoice does not exists!' })
+        if (invoice.state !== stateConfig.WAIT_FOR_PAY) return res.status(httpCode.BAD_REQUEST).json({ msg: 'invoice don\'t wait for pay' })
+        const invoiceRef = serverHelper.randomOrderRef()
         const body = {
           vnp_Amount: `${invoice.amount * 100}`,
           vnp_Command: vnpayConfig.vnpCommand,
-          vnp_CreateDate: moment(new Date(invoice.createdAt * 1000)).format('YYYYMMDDHHmmss'),
+          vnp_CreateDate: moment().format('YYYYMMDDHHmmss'),
           vnp_CurrCode: vnpayConfig.vnpCurrCode,
           vnp_Locale: vnpayConfig.vnpLocale,
           vnp_OrderInfo: invoice.orderInfo,
@@ -166,7 +167,7 @@ module.exports = (container) => {
         const hmac = crypto.createHmac('sha512', secretKey)
         body.vnp_SecureHash = hmac.update(new Buffer(signData, 'utf-8')).digest('hex')
         const url = `${vnpayConfig.vnpUrl}?${qs.stringify(body, { encode: false })}`
-        await invoiceRepo.updateInvoice(id, { state: stateConfig.PENDING })
+        await invoiceRepo.updateInvoice(id, { state: stateConfig.PENDING, invoiceRef })
         return res.redirect(url)
       }
       res.status(httpCode.BAD_REQUEST).json({ msg: 'wrong id' })
@@ -186,6 +187,7 @@ module.exports = (container) => {
       switch (vnpResponseCode) {
         case '24':
           data.msg = 'Người dùng hủy giao dịch'
+          await invoiceRepo.updateInvoice(id, { state: stateConfig.WAIT_FOR_PAY })
           return res.status(httpCode.BAD_REQUEST).json(data)
         case '00':
           data.msg = 'Giao dịch thành công'
@@ -193,6 +195,7 @@ module.exports = (container) => {
           return res.status(httpCode.SUCCESS).json(data)
         default:
           data.msg = 'Lỗi'
+          await invoiceRepo.updateInvoice(id, { state: stateConfig.WAIT_FOR_PAY })
           return res.status(httpCode.BAD_REQUEST).json(data)
       }
     } catch (e) {
