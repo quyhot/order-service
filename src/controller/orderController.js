@@ -4,11 +4,16 @@ module.exports = (container) => {
   const {
     schemaValidator,
     schemas: {
-      Order
+      Order,
+      Invoice
     }
   } = container.resolve('models')
   const { httpCode } = container.resolve('config')
-  const { orderRepo } = container.resolve('repo')
+  const { orderRepo, invoiceRepo } = container.resolve('repo')
+  let ref = 10
+  const genInvoiceRef = () => {
+    return ref++
+  }
   const addOrder = async (req, res) => {
     try {
       const body = req.body
@@ -19,8 +24,19 @@ module.exports = (container) => {
       if (error) {
         return res.status(httpCode.BAD_REQUEST).json({ msg: error.message })
       }
-      const sp = await orderRepo.addOrder(value)
-      res.status(httpCode.CREATED).json(sp)
+      const order = await orderRepo.addOrder(value)
+      const invoiceBody = {
+        invoiceRef: genInvoiceRef(),
+        amount: order.total * 20000,
+        orderId: order._id.toString(),
+        orderInfo: 'test'
+      }
+      const check = await schemaValidator(invoiceBody, 'Invoice')
+      if (check.error) {
+        return res.status(httpCode.BAD_REQUEST).json({ msg: error.message })
+      }
+      const invoice = await invoiceRepo.addInvoice(check.value)
+      res.status(httpCode.CREATED).json(invoice)
     } catch (e) {
       logger.e(e)
       res.status(httpCode.UNKNOWN_ERROR).end()

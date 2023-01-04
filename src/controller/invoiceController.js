@@ -168,7 +168,7 @@ module.exports = (container) => {
         body.vnp_SecureHash = hmac.update(new Buffer(signData, 'utf-8')).digest('hex')
         const url = `${vnpayConfig.vnpUrl}?${qs.stringify(body, { encode: false })}`
         await invoiceRepo.updateInvoice(id, { state: stateConfig.PENDING, invoiceRef })
-        return res.redirect(url)
+        return res.status(httpCode.SUCCESS).json({ url })
       }
       res.status(httpCode.BAD_REQUEST).json({ msg: 'wrong id' })
     } catch (e) {
