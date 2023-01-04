@@ -38,7 +38,10 @@ const joi2MongoSchema = (joiSchema, special = {}, schemaOnly = {}, joiOnly = {})
 module.exports = container => {
   container.registerValue('ObjectId', mongoose.Types.ObjectId)
   const Invoice = require('./invoice.model')(joi, mongoose, { joi2MongoSchema })
-  const schemas = { Invoice }
+  const Product = require('./product.model')(joi, mongoose, { joi2MongoSchema })
+  const Transport = require('./transport.model')(joi, mongoose, { joi2MongoSchema })
+  const Order = require('./order.model')(joi, mongoose, { joi2MongoSchema })
+  const schemas = { Invoice, Product, Transport, Order }
   const schemaValidator = (obj, type) => {
     const schema = schemas[type]
     if (schema) {

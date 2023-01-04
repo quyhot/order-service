@@ -1,4 +1,5 @@
 module.exports = (joi, mongoose, { joi2MongoSchema, schemas }) => {
+  const { ObjectId } = mongoose.Types
   const stateConfig = {
     WAIT_FOR_PAY: 1,
     PENDING: 2,
@@ -16,6 +17,10 @@ module.exports = (joi, mongoose, { joi2MongoSchema, schemas }) => {
     createdAt: {
       type: Number,
       default: () => Math.floor(Date.now() / 1000)
+    },
+    orderId: {
+      type: ObjectId,
+      ref: 'Order'
     }
   })
   invoiceSchema.statics.validateObj = (obj, config = {}) => {

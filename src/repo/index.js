@@ -1,6 +1,9 @@
 const repo = (container) => {
   const invoiceRepo = require('./invoiceRepo')(container)
-  return { invoiceRepo }
+  const productRepo = require('./productRepo')(container)
+  const transportRepo = require('./transportRepo')(container)
+  const orderRepo = require('./orderRepo')(container)
+  return { invoiceRepo, productRepo, transportRepo, orderRepo }
 }
 const connect = (container) => {
   const dbPool = container.resolve('db')
