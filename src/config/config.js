@@ -64,4 +64,9 @@ const vnpayConfig = {
   vnpCurrCode: process.env.VNPAY_CURRCODE || 'VND',
   vnpCommand: process.env.VNPAY_CURRCODE || 'pay'
 }
-module.exports = { dbSettings, serverHelper: serverHelper(), serverSettings, httpCode, vnpayConfig }
+
+const urlConfig = {
+  frontend: process.env.FE_URL || 'http://localhost:8080'
+}
+
+module.exports = { dbSettings, serverHelper: serverHelper(), serverSettings, httpCode, vnpayConfig, urlConfig }

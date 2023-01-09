@@ -10,7 +10,7 @@ module.exports = (container) => {
   } = container.resolve('models')
   const { httpCode } = container.resolve('config')
   const { orderRepo, invoiceRepo } = container.resolve('repo')
-  let ref = 10
+  let ref = 45
   const genInvoiceRef = () => {
     return ref++
   }

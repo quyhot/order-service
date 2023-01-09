@@ -11,7 +11,7 @@ module.exports = (container) => {
     }
   } = container.resolve('models')
   const { stateConfig } = Invoice.getConfig()
-  const { httpCode, serverHelper, vnpayConfig } = container.resolve('config')
+  const { httpCode, serverHelper, vnpayConfig, urlConfig } = container.resolve('config')
   const { invoiceRepo } = container.resolve('repo')
   const addInvoice = async (req, res) => {
     try {
@@ -47,7 +47,7 @@ module.exports = (container) => {
   const getInvoiceById = async (req, res) => {
     try {
       const { id } = req.params
-      if (id) {
+      if (id && id.length === 24) {
         const invoice = await invoiceRepo.getInvoiceById(id).lean()
         res.status(httpCode.SUCCESS).json(invoice)
       } else {
@@ -135,6 +135,7 @@ module.exports = (container) => {
   }
   const genReturnUrl = (id) => {
     return `${vnpayConfig.vnpReturnUrl}/${id}/result`
+    // return `${urlConfig.frontend}/success/${id}`
   }
   const payInvoice = async (req, res) => {
     try {
@@ -188,16 +189,17 @@ module.exports = (container) => {
         case '24':
           data.msg = 'Người dùng hủy giao dịch'
           await invoiceRepo.updateInvoice(id, { state: stateConfig.WAIT_FOR_PAY })
-          return res.status(httpCode.BAD_REQUEST).json(data)
+          break
         case '00':
           data.msg = 'Giao dịch thành công'
           await invoiceRepo.updateInvoice(id, { state: stateConfig.SUCCESS })
-          return res.status(httpCode.SUCCESS).json(data)
+          break
         default:
           data.msg = 'Lỗi'
           await invoiceRepo.updateInvoice(id, { state: stateConfig.WAIT_FOR_PAY })
-          return res.status(httpCode.BAD_REQUEST).json(data)
+          break
       }
+      return res.redirect(`${urlConfig.frontend}/success/${id}`)
     } catch (e) {
       logger.e(e)
       res.status(httpCode.UNKNOWN_ERROR).json({ ok: false })
