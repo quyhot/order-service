@@ -18,7 +18,7 @@ module.exports = container => {
     })
   }
   const checkIdExist = (id) => {
-    return Invoice.findOne({ id })
+    return Invoice.findOne({ id }).populate('orderId')
   }
   const getCount = (pipe = {}) => {
     return Invoice.countDocuments(pipe)
@@ -27,7 +27,7 @@ module.exports = container => {
     return Invoice.aggregate(pipe)
   }
   const getInvoice = (pipe, limit, skip, sort) => {
-    return Invoice.find(pipe).limit(limit).skip(skip).sort(sort)
+    return Invoice.find(pipe).limit(limit).skip(skip).sort(sort).populate('orderId')
   }
   const getInvoiceNoPaging = (pipe) => {
     return Invoice.find(pipe)
