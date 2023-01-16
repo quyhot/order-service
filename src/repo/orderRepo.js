@@ -6,7 +6,7 @@ module.exports = container => {
     return c.save()
   }
   const getOrderById = (id) => {
-    return Order.findById(id)
+    return Order.findById(id).populate('products.product')
   }
   const deleteOrder = (id) => {
     return Order.findByIdAndRemove(id, { useFindAndModify: false })
@@ -27,7 +27,7 @@ module.exports = container => {
     return Order.aggregate(pipe)
   }
   const getOrder = (pipe, limit, skip, sort) => {
-    return Order.find(pipe).limit(limit).skip(skip).sort(sort)
+    return Order.find(pipe).limit(limit).skip(skip).sort(sort).populate('products.product')
   }
   const getOrderNoPaging = (pipe) => {
     return Order.find(pipe)

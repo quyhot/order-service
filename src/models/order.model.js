@@ -1,13 +1,27 @@
 module.exports = (joi, mongoose, { joi2MongoSchema, schemas }) => {
+  const { ObjectId } = mongoose.Types
   const orderJoi = joi.object({
-    products: joi.array().items(joi.string()).min(1),
+    products: joi.array().items(joi.object().keys({
+      product: joi.string().allow(''),
+      amount: joi.number()
+    })).min(1),
     transport: joi.string().required(),
     email: joi.string().required(),
     phone: joi.string().required(),
     name: joi.string().required(),
     total: joi.number().required()
   })
-  const orderSchema = joi2MongoSchema(orderJoi, {}, {
+  const orderSchema = joi2MongoSchema(orderJoi, {
+    products: [{
+      product: {
+        type: ObjectId,
+        ref: 'Product'
+      },
+      amount: {
+        type: Number
+      }
+    }]
+  }, {
     createdAt: {
       type: Number,
       default: () => Math.floor(Date.now() / 1000)
