@@ -15,12 +15,12 @@ const httpCode = {
 }
 
 const dbSettings = {
-  db: process.env.DB || 'quytest-order-service',
+  db: process.env.DB || 'order-service',
   user: process.env.DB_USER || '',
   pass: process.env.DB_PASS || '',
   repl: process.env.DB_REPLS || '',
   servers: (process.env.DB_SERVERS) ? process.env.DB_SERVERS.split(',') : [
-    'mayhao:27017'
+    '127.0.0.1:27017'
   ]
 }
 const serverHelper = function () {

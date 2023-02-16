@@ -1,4 +1,5 @@
 const crypto = require('crypto')
+const qs = require('qs')
 module.exports = (container) => {
   const logger = container.resolve('logger')
   const ObjectId = container.resolve('ObjectId')
@@ -11,7 +12,12 @@ module.exports = (container) => {
     }
   } = container.resolve('models')
   const { stateConfig } = Invoice.getConfig()
-  const { httpCode, serverHelper, vnpayConfig, urlConfig } = container.resolve('config')
+  const {
+    httpCode,
+    serverHelper,
+    vnpayConfig,
+    urlConfig
+  } = container.resolve('config')
   const { invoiceRepo } = container.resolve('repo')
   const addInvoice = async (req, res) => {
     try {
@@ -168,7 +174,10 @@ module.exports = (container) => {
         const hmac = crypto.createHmac('sha512', secretKey)
         body.vnp_SecureHash = hmac.update(new Buffer(signData, 'utf-8')).digest('hex')
         const url = `${vnpayConfig.vnpUrl}?${qs.stringify(body, { encode: false })}`
-        await invoiceRepo.updateInvoice(id, { state: stateConfig.PENDING, invoiceRef })
+        await invoiceRepo.updateInvoice(id, {
+          state: stateConfig.PENDING,
+          invoiceRef
+        })
         return res.status(httpCode.SUCCESS).json({ url })
       }
       res.status(httpCode.BAD_REQUEST).json({ msg: 'wrong id' })
@@ -181,23 +190,42 @@ module.exports = (container) => {
     try {
       const q = req.query
       const { id } = req.params
-      const { vnp_ResponseCode: vnpResponseCode } = q
-      const data = {
-        vnpResponseCode
-      }
-      switch (vnpResponseCode) {
-        case '24':
-          data.msg = 'Người dùng hủy giao dịch'
-          await invoiceRepo.updateInvoice(id, { state: stateConfig.WAIT_FOR_PAY })
-          break
-        case '00':
-          data.msg = 'Giao dịch thành công'
-          await invoiceRepo.updateInvoice(id, { state: stateConfig.SUCCESS })
-          break
-        default:
-          data.msg = 'Lỗi'
-          await invoiceRepo.updateInvoice(id, { state: stateConfig.WAIT_FOR_PAY })
-          break
+      const {
+        vnp_ResponseCode: vnpResponseCode,
+        vnp_SecureHash: secureHash
+      } = q
+      delete q.vnp_SecureHash
+      const sorted = Object.keys(q)
+        .sort()
+        .reduce((accumulator, key) => {
+          accumulator[key] = q[key];
+
+          return accumulator;
+        }, {});
+      const { secretKey } = vnpayConfig
+      const signData = qs.stringify(sorted, { encode: false })
+      const hmac = crypto.createHmac('sha512', secretKey)
+      const hash = hmac.update(new Buffer(signData, 'utf-8')).digest('hex')
+      if (hash === secureHash) {
+        const data = {
+          vnpResponseCode
+        }
+        switch (vnpResponseCode) {
+          case '24':
+            data.msg = 'Người dùng hủy giao dịch'
+            await invoiceRepo.updateInvoice(id, { state: stateConfig.WAIT_FOR_PAY })
+            break
+          case '00':
+            data.msg = 'Giao dịch thành công'
+            await invoiceRepo.updateInvoice(id, { state: stateConfig.SUCCESS })
+            break
+          default:
+            data.msg = 'Lỗi'
+            await invoiceRepo.updateInvoice(id, { state: stateConfig.WAIT_FOR_PAY })
+            break
+        }
+      } else {
+        await invoiceRepo.updateInvoice(id, { state: stateConfig.WAIT_FOR_PAY })
       }
       return res.redirect(`${urlConfig.frontend}/success/${id}`)
     } catch (e) {
